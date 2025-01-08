@@ -127,11 +127,20 @@ public class MirrorFishMoves : NetworkBehaviour
     {
         // 自分がサーバーでない場合は何もしない
         if (!isServer) return;
+        Debug.Log("1");
+
+        // タグが "Player" でない場合は何もしない
+        if (!other.CompareTag("Player"))
+        {
+            Debug.Log("2");
+            return;
+        }
+        Debug.Log("3");
 
         // 衝突した相手がプレイヤーか確認
         MirrorFishMoves otherPlayer = other.GetComponent<MirrorFishMoves>();
         if (otherPlayer == null) return; // 相手がプレイヤーでない場合は何もしない
-        Debug.Log("プレイヤーとぶつかりました");
+        Debug.LogError("4");
 
         // 自分と相手の大きさ（スケール）を比較
         float thisSize = transform.localScale.magnitude;
@@ -142,19 +151,19 @@ public class MirrorFishMoves : NetworkBehaviour
             // 自分が大きい場合、経験値を獲得し相手を削除
             AddExperience(50); // 獲得経験値は適宜調整
             otherPlayer.GameOver();
-            Debug.Log("経験値吸収");
+            Debug.Log("5");
         }
         else if (thisSize < otherSize)
         {
             // 相手が大きい場合、自分が削除される
             otherPlayer.AddExperience(50);
             GameOver();
-            Debug.Log("ゲームオーバー");
+            Debug.Log("6");
         }
         else
         {
             // 同じサイズの場合の処理（今回は何もしない）
-            Debug.Log("同じサイズなのでスルー");
+            Debug.Log("7");
         }
     }
 
