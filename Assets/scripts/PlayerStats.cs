@@ -13,7 +13,7 @@ public class PlayerStats : NetworkBehaviour
 
         // プレイヤーのスケールを変更
         float newScale = 1 + experience * sizeIncreasePerExperience;
-        Debug.Log("sizeIncreasePerExperience:" + sizeIncreasePerExperience);
+        //Debug.Log("sizeIncreasePerExperience:" + sizeIncreasePerExperience);
         transform.localScale = Vector3.one * newScale;
 
         // クライアントにもサイズ変更を通知
