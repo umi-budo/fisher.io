@@ -19,6 +19,11 @@ public class PlayerStats : NetworkBehaviour
         // クライアントにもサイズ変更を通知
         RpcUpdateScale(transform.localScale);
     }
+    [Server]
+    public void ResetExperience()
+    {
+        experience = 0; // 経験値をリセット
+    }
 
     [ClientRpc]
     void RpcUpdateScale(Vector3 newScale)

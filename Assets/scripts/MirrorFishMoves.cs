@@ -2,8 +2,7 @@
 using UnityEngine;
 //Mirrorを使用可能とする
 using Mirror;
-using UnityEngine.UIElements;
-
+using UnityEngine.UI;
 /// <summary>
 /// 簡単なMirror移動処理方法
 /// 基本的にプレイヤー側の入力をサーバー側に渡して処理を行います。
@@ -65,9 +64,54 @@ public class MirrorFishMoves : NetworkBehaviour
     [Header("カメラの旋回力"), SerializeField]
     private float cam_RotationSpeed = 3.0f;
 
+    // リプレイボタン
+    [Header("リプレイボタン") ,SerializeField] 
+    private Button replayButton;
+
+    // 初期サイズ
+    private Vector3 initialScale;
 
     void Start()
     {
+        // シーン上のボタンを探して設定
+        if (replayButton == null)
+        {
+            //replayButton = GameObject.Find("ReplayButton").GetComponent<Button>();
+
+            // シーン内のすべての Button コンポーネントを検索（非アクティブも含む）
+            Button[] buttons = Resources.FindObjectsOfTypeAll<Button>();
+
+            // ReplayButton を名前で検索
+            foreach (var button in buttons)
+            {
+                if (button.name == "ReplayButton")
+                {
+                    replayButton = button;
+                    break;
+                }
+            }
+
+            // 見つかった場合、設定を行う
+            if (replayButton != null)
+            {
+                replayButton.onClick.AddListener(OnReplayButtonClicked);
+            }
+            else
+            {
+                Debug.LogWarning("ReplayButton が見つかりませんでした。");
+            }
+
+        }
+        // 初期サイズを記録
+        initialScale = transform.localScale;
+
+        // リプレイボタンが設定されている場合、非アクティブ化
+        if (replayButton != null)
+        {
+            replayButton.gameObject.SetActive(false);
+            replayButton.onClick.AddListener(OnReplayButtonClicked);
+        }
+
         //アニメーター獲得
         //m_Animator = GetComponent<Animator>();
         //物理を取得
@@ -96,7 +140,47 @@ public class MirrorFishMoves : NetworkBehaviour
             PlayerMove();
         }
         CameraControl();
+
+        // スケールが5以上になったらゲームクリア
+        if (transform.localScale.x >= 5f)
+        {
+            GameClear();
+        }
     }
+
+    // ゲームクリア処理
+    private void GameClear()
+    {
+        Debug.Log("Game Clear!");
+
+        // プレイヤーの経験値を初期化
+        PlayerStats stats = GetComponent<PlayerStats>();
+        stats.ResetExperience();
+
+        // リプレイボタンを表示
+        if (replayButton != null)
+        {
+            replayButton.gameObject.SetActive(true);
+        }
+
+        // プレイヤーの操作を無効化
+        if (isLocalPlayer)
+        {
+            enabled = false; // このスクリプトのUpdateを無効化
+        }
+
+        // 他に必要なゲームクリア処理を追加
+        // 例: UIに「ゲームクリア」のメッセージを表示
+        ShowGameClearUI();
+    }
+
+    // ゲームクリアUI表示処理（例）
+    private void ShowGameClearUI()
+    {
+        // UIを管理する別のスクリプトやGameObjectにアクセスして処理を記述
+        Debug.Log("Display Game Clear UI");
+    }
+
     private void LateUpdate()
     {
         //クライアント/プレイヤーである場合、プレイヤー入力を許可
@@ -123,47 +207,48 @@ public class MirrorFishMoves : NetworkBehaviour
     }
 
     [ServerCallback]
-    private void OnTriggerEnter(Collider other)
+    private void OnCollisionEnter(Collision collision)
     {
+        Debug.Log($"collision objectname: {collision.gameObject.name}, Tag: {collision.gameObject.tag}");
+
         // 自分がサーバーでない場合は何もしない
         if (!isServer) return;
-        Debug.Log("1");
-
-        // タグが "Player" でない場合は何もしない
-        if (!other.CompareTag("Player"))
-        {
-            Debug.Log("2");
-            return;
-        }
-        Debug.Log("3");
 
         // 衝突した相手がプレイヤーか確認
-        MirrorFishMoves otherPlayer = other.GetComponent<MirrorFishMoves>();
-        if (otherPlayer == null) return; // 相手がプレイヤーでない場合は何もしない
-        Debug.LogError("4");
+        MirrorFishMoves otherPlayer = collision.gameObject.GetComponent<MirrorFishMoves>();
+        //if (otherPlayer == null) return; // 相手がプレイヤーでない場合は何もしない
+        Debug.LogError("collision object is server");
 
+        if (otherPlayer != null)
+        {
+            // プレイヤーとぶつかった場合の処理
+            Debug.Log("collision another player");
+            HandlePlayerCollision(otherPlayer);
+        }
+        //else if (collision.gameObject.CompareTag("Wall"))
+        //{
+        //    // 壁とぶつかった場合の処理
+        //    Debug.Log("collision Wall");
+        //    GameOver(); // 壁に当たったらゲームオーバー処理
+        //}
+    }
+
+    private void HandlePlayerCollision(MirrorFishMoves otherPlayer)
+    {
         // 自分と相手の大きさ（スケール）を比較
         float thisSize = transform.localScale.magnitude;
         float otherSize = otherPlayer.transform.localScale.magnitude;
 
         if (thisSize > otherSize)
         {
+            // 相手の経験値の80%を計算
+            PlayerStats otherStats = otherPlayer.GetComponent<PlayerStats>();
+            int otherExperience = otherStats != null ? otherStats.experience : 0;
+            int gainedExperience = Mathf.FloorToInt(otherExperience * 0.8f);
+
             // 自分が大きい場合、経験値を獲得し相手を削除
-            AddExperience(50); // 獲得経験値は適宜調整
+            AddExperience(gainedExperience);
             otherPlayer.GameOver();
-            Debug.Log("5");
-        }
-        else if (thisSize < otherSize)
-        {
-            // 相手が大きい場合、自分が削除される
-            otherPlayer.AddExperience(50);
-            GameOver();
-            Debug.Log("6");
-        }
-        else
-        {
-            // 同じサイズの場合の処理（今回は何もしない）
-            Debug.Log("7");
         }
     }
 
@@ -180,13 +265,135 @@ public class MirrorFishMoves : NetworkBehaviour
     [Server]
     private void GameOver()
     {
+        Debug.Log("GameOver");
+
+        // プレイヤーの経験値を初期化
+        PlayerStats stats = GetComponent<PlayerStats>();
+        if (stats != null)
+        {
+            stats.ResetExperience();
+            Debug.Log("Player experience reset");
+        }
+        else
+        {
+            Debug.LogWarning("PlayerStats component is missing");
+        }
+
+
         // 非表示にする処理
         RpcHidePlayer();
+        Debug.Log("HidePlayer");
+        // リプレイボタンを表示
+        RpcShowReplayButton();
+        Debug.Log("ShowReplayButton");
     }
+
+    [ClientRpc]
+    private void RpcShowReplayButton()
+    {
+        if (replayButton != null)
+        {
+            replayButton.gameObject.SetActive(true);
+            Debug.Log("show ReplayButton");
+        }
+        else
+        {
+            Debug.LogError("replayButton is null");
+        }
+    }
+
+    [Client]
+    private void OnReplayButtonClicked()
+    {
+        if (!isLocalPlayer)return;
+
+        // ボタンを非アクティブに戻す
+        if (replayButton != null)
+        {
+            replayButton.gameObject.SetActive(false);
+        }
+
+        // サーバーにリプレイリクエストを送信
+        Debug.Log("Call CmdRequestReplay");
+        CmdRequestReplay();
+
+    }
+
+    [Command]
+    private void CmdRequestReplay()
+    {
+        Debug.Log("Call RpcRespawnPlayer");
+        RpcRespawnPlayer();
+    }
+
+    [ClientRpc]
+    private void RpcRespawnPlayer()
+    {
+        Debug.Log("Call RpcRespawnPlayer");
+        if (!isServer && !isClient)
+        {
+            Debug.LogError("サーバーまたはクライアントがアクティブではありません");
+            Debug.Log($"isServer: {isServer}, isClient: {isClient}, isLocalPlayer: {isLocalPlayer}");
+
+            return;
+        }
+
+        // プレイヤーを初期位置・初期サイズにリセット
+        transform.localScale = initialScale;
+        transform.position = Vector3.zero; // 初期位置（適宜変更）
+
+        // レンダラーを有効にして表示
+        Renderer[] renderers = GetComponentsInChildren<Renderer>();
+        foreach (var renderer in renderers)
+        {
+            renderer.enabled = true;
+        }
+
+        // コライダーを有効化
+        Collider[] colliders = GetComponentsInChildren<Collider>();
+        foreach (var collider in colliders)
+        {
+            collider.enabled = true;
+        }
+
+        // 物理演算を有効化（必要に応じて）
+        if (m_Rigidbody != null)
+        {
+            m_Rigidbody.isKinematic = false;
+        }
+        // プレイヤーのスクリプトを再び有効化
+        enabled = true; // Updateの動作を再開
+    }
+
+    //[ClientRpc]
+    //private void RpcShowPlayer()
+    //{
+    //    Debug.Log("Call RpcShowPlayer");
+    //    // レンダラーを有効にして表示
+    //    Renderer[] renderers = GetComponentsInChildren<Renderer>();
+    //    foreach (var renderer in renderers)
+    //    {
+    //        renderer.enabled = true;
+    //    }
+
+    //    // コライダーを有効化
+    //    Collider[] colliders = GetComponentsInChildren<Collider>();
+    //    foreach (var collider in colliders)
+    //    {
+    //        collider.enabled = true;
+    //    }
+
+    //    // 物理演算を有効化（必要に応じて）
+    //    if (m_Rigidbody != null)
+    //    {
+    //        m_Rigidbody.isKinematic = false;
+    //    }
+    //}
 
     [ClientRpc]
     private void RpcHidePlayer()
     {
+        Debug.Log("HidePlayer");
         // レンダラーを無効にして非表示にする
         Renderer[] renderers = GetComponentsInChildren<Renderer>();
         foreach (var renderer in renderers)
