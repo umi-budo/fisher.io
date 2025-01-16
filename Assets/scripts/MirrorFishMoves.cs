@@ -29,8 +29,8 @@ using UnityEngine.UI;
 
 public class MirrorFishMoves : NetworkBehaviour
 {
-    //[Header("アニメーターリンク")]
-    //public Animator m_Animator;
+    [Header("アニメーターリンク")]
+    public Animator m_Animator;
     [Header("キャラクターの移動速度")]
     public float m_MoveSpeed = 10f;
     [Header("キャラクターの最大速度")]
@@ -113,7 +113,7 @@ public class MirrorFishMoves : NetworkBehaviour
         }
 
         //アニメーター獲得
-        //m_Animator = GetComponent<Animator>();
+        m_Animator = GetComponent<Animator>();
         //物理を取得
         m_Rigidbody = GetComponent<Rigidbody>();
         if (m_Rigidbody == null)
@@ -134,6 +134,8 @@ public class MirrorFishMoves : NetworkBehaviour
 
     void Update()
     {
+
+        m_Animator.SetFloat("speed", m_Rigidbody.velocity.magnitude);
         //クライアント/プレイヤーである場合、プレイヤー入力を許可
         if (isLocalPlayer)
         {
@@ -579,16 +581,15 @@ public class MirrorFishMoves : NetworkBehaviour
         m_Rigidbody.AddForce(moveDirection.normalized * m_MoveSpeed, ForceMode.Force);
 
             // 現在の速度を取得
-            Vector3 velocity = m_Rigidbody.velocity;
+        Vector3 velocity = m_Rigidbody.velocity;
 
-            // 最大速度を超えないように速度を制限
-            if (velocity.magnitude > m_MaxSpeed)
+        // 最大速度を超えないように速度を制限
+        if (velocity.magnitude > m_MaxSpeed)
             {
                 m_Rigidbody.velocity = velocity.normalized * m_MaxSpeed;
-            }
-
-            // サーバーに送るための新しい位置と回転を設定
-            N_Position = this.transform.position;
+        }
+        // サーバーに送るための新しい位置と回転を設定
+        N_Position = this.transform.position;
             N_Rotation = this.transform.rotation;
 
         //移動アニメーション処理
