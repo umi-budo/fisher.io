@@ -17,7 +17,7 @@ GameObject:
   - component: {fileID: 8254175665685884649}
   - component: {fileID: 559252287065783261}
   - component: {fileID: 7039918868696755216}
-  - component: {fileID: 6663200967188153589}
+  - component: {fileID: -1904057713705888495}
   m_Layer: 0
   m_Name: FishModel
   m_TagString: Player
@@ -216,7 +216,7 @@ MonoBehaviour:
   syncInterval: 0
   experience: 0
   sizeIncreasePerExperience: 0.01
---- !u!95 &6663200967188153589
+--- !u!95 &-1904057713705888495
 Animator:
   serializedVersion: 5
   m_ObjectHideFlags: 0

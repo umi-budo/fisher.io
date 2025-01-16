@@ -64,6 +64,12 @@ public class MirrorFishMoves : NetworkBehaviour
     [Header("カメラの旋回力"), SerializeField]
     private float cam_RotationSpeed = 3.0f;
 
+    // 画像を表示するオブジェクト
+    [Header("ゲームクリア画像"), SerializeField]
+    private GameObject gameClearImage; // GameClear の画像
+    [Header("ゲームオーバー画像"), SerializeField]
+    private GameObject gameOverImage;  // GameOver の画像
+
     // リプレイボタン
     [Header("リプレイボタン") ,SerializeField] 
     private Button replayButton;
@@ -73,11 +79,16 @@ public class MirrorFishMoves : NetworkBehaviour
 
     void Start()
     {
+        // 非アクティブ状態も含めてImageを探す
+        gameClearImage = FindInactiveObjectByName("GameClearImage");
+        gameOverImage = FindInactiveObjectByName("GameOverImage");
+
+        // 見つけたオブジェクトの初期状態を設定
+        if (gameClearImage != null) gameClearImage.SetActive(false);
+        if (gameOverImage != null) gameOverImage.SetActive(false);
         // シーン上のボタンを探して設定
         if (replayButton == null)
         {
-            //replayButton = GameObject.Find("ReplayButton").GetComponent<Button>();
-
             // シーン内のすべての Button コンポーネントを検索（非アクティブも含む）
             Button[] buttons = Resources.FindObjectsOfTypeAll<Button>();
 
@@ -154,6 +165,12 @@ public class MirrorFishMoves : NetworkBehaviour
     private void GameClear()
     {
         Debug.Log("Game Clear!");
+
+        // 画像を表示
+        if (gameClearImage != null)
+        {
+            gameClearImage.SetActive(true);
+        }
 
         // プレイヤーの経験値を初期化
         PlayerStats stats = GetComponent<PlayerStats>();
@@ -269,6 +286,13 @@ public class MirrorFishMoves : NetworkBehaviour
     {
         Debug.Log("GameOver");
 
+        // ゲームオーバー画像を表示
+        if (gameOverImage != null)
+        {
+            gameOverImage.SetActive(true);
+        }
+
+
         // プレイヤーの経験値を初期化
         PlayerStats stats = GetComponent<PlayerStats>();
         if (stats != null)
@@ -314,6 +338,9 @@ public class MirrorFishMoves : NetworkBehaviour
         {
             replayButton.gameObject.SetActive(false);
         }
+        // 見つけたオブジェクトの初期状態を設定
+        if (gameClearImage != null) gameClearImage.SetActive(false);
+        if (gameOverImage != null) gameOverImage.SetActive(false);
 
         // サーバーにリプレイリクエストを送信
         Debug.Log("Call CmdRequestReplay");
@@ -620,4 +647,18 @@ public class MirrorFishMoves : NetworkBehaviour
     //    //サーバー側のアニメーションを変更
     //    m_Animator.SetFloat("Speed", m_AnimeMoveSpeed);
     //}
+    // 非アクティブ状態のオブジェクトを探すメソッド
+    private GameObject FindInactiveObjectByName(string name)
+    {
+        GameObject[] allObjects = Resources.FindObjectsOfTypeAll<GameObject>();
+        foreach (GameObject obj in allObjects)
+        {
+            if (obj.name == name && obj.hideFlags == HideFlags.None)
+            {
+                return obj;
+            }
+        }
+        Debug.LogWarning($"{name} が見つかりませんでした。");
+        return null;
+    }
 }
